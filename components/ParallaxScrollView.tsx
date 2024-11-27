@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactElement } from 'react';
-import { StyleSheet, useColorScheme } from 'react-native';
+import {Button, StyleSheet, useColorScheme, View} from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedRef,
@@ -14,12 +14,21 @@ const HEADER_HEIGHT = 250;
 type Props = PropsWithChildren<{
   headerImage: ReactElement;
   headerBackgroundColor: { dark: string; light: string };
+  loadMoreData?: () => void;
+  isLoadingMore?: boolean;
+  places: any[];
+  onReset: () => void;
 }>;
 
 export default function ParallaxScrollView({
   children,
   headerImage,
   headerBackgroundColor,
+  loadMoreData,
+  isLoadingMore = false,
+  places = [],
+  onReset,
+
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
@@ -42,9 +51,21 @@ export default function ParallaxScrollView({
     };
   });
 
+    const handleScroll = (event: any) => {
+        const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+        if (!places.length) {
+            return;
+        }
+        const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 50;
+
+        if (isCloseToBottom && loadMoreData && !isLoadingMore) {
+            loadMoreData();
+        }
+    };
+
   return (
     <ThemedView style={styles.container}>
-      <Animated.ScrollView ref={scrollRef} scrollEventThrottle={16}>
+      <Animated.ScrollView ref={scrollRef} scrollEventThrottle={16} onScroll={handleScroll}>
         <Animated.View
           style={[
             styles.header,
@@ -55,6 +76,9 @@ export default function ParallaxScrollView({
         </Animated.View>
         <ThemedView style={styles.content}>{children}</ThemedView>
       </Animated.ScrollView>
+        {!!places.length && <View style={styles.resetButtonContainer}>
+            <Button title="Reset" onPress={onReset} />
+        </View>}
     </ThemedView>
   );
 }
@@ -73,4 +97,14 @@ const styles = StyleSheet.create({
     gap: 16,
     overflow: 'hidden',
   },
+  resetButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderTopWidth: 1,
+    borderColor: '#ccc',
+    },
 });
